@@ -3,13 +3,18 @@
 ENVOY_SD=envoy-cluster-sd-loadbalancer.iias-metrics.development.svc.spin.nersc.org:3306
 CLUSTER_NAME=test-cluster
 
+if [ $# -lt 1 ]; then
+    	echo "Usage: $0 <action:add,show,clear> <address> <port>"
+	exit 1
+fi
+
 if [ "$1" == "show" ]; then
 	curl -X POST $ENVOY_SD/v3/discovery:clusters
 	exit 0
 fi
 
-if [ "$1" == "clear" ]; then
-	curl -X POST $ENVOY_SD/cluster-config/reset
+if [ "$1" == "reset" ]; then
+	curl -X POST $ENVOY_SD/reset
 	exit 0
 fi
 
@@ -22,6 +27,9 @@ ADDRESS=$2
 PORT=$3
 
 if [ $1 == add ]; then
+	if [ $2 == self ]; then
+		ADDRESS=$(hostname -f)
+	fi
 	curl -X POST -H "Content-Type: application/json" -d "{\"cluster_name\": \"$CLUSTER_NAME\", \"address\": \"$ADDRESS\", \"port\": $PORT}" $ENVOY_SD/cluster-config
 	exit 0
 fi

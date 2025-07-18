@@ -2,20 +2,44 @@ from flask import Flask, jsonify, request
 import socket
 
 
+class Endpoints:
+    def __init__(self):
+        self._endpoints = {}
+
+    def add(self, address, port):
+        ip = socket.gethostbyname(address)
+        if not ip:
+            return False
+        self._endpoints[f"{address}:{port}"] = {
+            'endpoint': {
+                'address': {
+                    'socket_address': {
+                        'address': f'{ip}',
+                        'port_value': f'{port}'
+                    }
+                }
+            }
+        }
+        return True
+
+    def remove(self, address, port):
+        if f"{address}:{port}" in self._endpoints:
+            del self._endpoints[f"{address}:{port}"]
+            return True
+        return False
+
+    def clear(self):
+        self._endpoints.clear()
+
+    def list(self):
+        return list(self._endpoints.values())
+
+    def json(self):
+        return jsonify(list(self._endpoints.values()))
+
+
 app = Flask(__name__)
-
-#endpoint_dict = {
-#                'endpoint' : {
-#                    'address': {
-#                        'socket_address': {
-#                            'address': '128.55.64.36',
-#                            'port_value': 9089
-#                            }
-#                    }
-#                }
-#}
-
-endpoints = []
+endpoints = Endpoints()
 
 @app.route('/v3/discovery:clusters', methods=['POST'])
 def envoy_get_cluster_config():
@@ -29,7 +53,7 @@ def envoy_get_cluster_config():
                 'lb_policy': 'round_robin',
                 'load_assignment': {
                     'cluster_name': 'test-cluster',
-                    'endpoints': {'lb_endpoints': endpoints}
+                    'endpoints': {'lb_endpoints': endpoints.list()}
                 }
             }
         ]
@@ -38,24 +62,28 @@ def envoy_get_cluster_config():
 
 @app.route('/cluster-config', methods=['POST'])
 def update_cluster_config():
-    global endpoints
     address = request.json.get('address')
     port = request.json.get('port')
 
     if address and port:
-        ip = socket.gethostbyname(address)
-        if not ip:
-            return jsoninfy(endpoints), 404
-        endpoints.append({'endpoint': {'address':{'socket_address':{'address': f'{ip}', 'port_value':f'{port}'}}}})
-        return jsonify(endpoints), 200
+        if endpoints.add(address, port):
+            return endpoints.json(), 200
 
-    return jsoninfy(endpoints), 404
-    
+    return endpoints.json(), 404
+
+@app.route('/remove-endpoint', methods=['POST'])
+def remove_endpoint():
+    address = request.json.get('address')
+    port = request.json.get('port')
+
+    if endpoints.remove(address, port):
+        return endpoints.json(), 200
+
+    return endpoints.json(), 404
 
 @app.route('/reset', methods=['POST'])
 def clear_hosts():
-    global endpoints
-    endpoints = []
+    endpoints.clear()
     return 'done!', 200
 
 if __name__ == '__main__':

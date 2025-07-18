@@ -1,36 +1,76 @@
 #!/bin/bash
 
-ENVOY_SD=envoy-cluster-sd-loadbalancer.iias-metrics.development.svc.spin.nersc.org:3306
+ENVOY_SD=${ENVOY_SD-envoy-cluster-sd-loadbalancer.iias-metrics.development.svc.spin.nersc.org:3306}
 CLUSTER_NAME=test-cluster
 
-if [ $# -lt 1 ]; then
-    	echo "Usage: $0 <action:add,show,clear> <address> <port>"
-	exit 1
-fi
+function usage() {
+	echo "Usage: $0 <action:add,remove,show,reset> [address] [port]"
+	echo ""
+	echo "Actions:"
+	echo "  add     <address> <port>  - Add an endpoint to the cluster"
+	echo "  remove  <address> <port>  - Remove an endpoint from the cluster"
+	echo "  show                      - Display current endpoints"
+	echo "  reset                     - Clear all endpoints"
+	echo ""
+	echo "Parameters:"
+	echo "  address                   - Hostname or IP address"
+	echo "  port                      - Port number"
+}
 
-if [ "$1" == "show" ]; then
-	curl -X POST $ENVOY_SD/v3/discovery:clusters
-	exit 0
-fi
-
-if [ "$1" == "reset" ]; then
-	curl -X POST $ENVOY_SD/reset
-	exit 0
-fi
-
-if [ $# -ne 3 ]; then
-    echo "Usage: $0 <action:add,show,clear> <address> <port>"
+function add() {
+	if [ $# -ne 3 ]; then
+    usage
     exit 1
-fi
+	fi
 
-ADDRESS=$2
-PORT=$3
+	ADDRESS=$2
+	PORT=$3
 
-if [ $1 == add ]; then
+	if [ $1 == add ]; then
+		if [ $2 == self ]; then
+			ADDRESS=$(hostname -f)
+		fi
+		curl -X POST -H "Content-Type: application/json" -d "{\"cluster_name\": \"$CLUSTER_NAME\", \"address\": \"$ADDRESS\", \"port\": $PORT}" $ENVOY_SD/cluster-config
+		exit 0
+	fi
+}
+
+function remove() {
+	if [ $# -ne 3 ]; then
+	usage
+	exit 1
+	fi
+
+	ADDRESS=$2
+	PORT=$3
 	if [ $2 == self ]; then
 		ADDRESS=$(hostname -f)
 	fi
-	curl -X POST -H "Content-Type: application/json" -d "{\"cluster_name\": \"$CLUSTER_NAME\", \"address\": \"$ADDRESS\", \"port\": $PORT}" $ENVOY_SD/cluster-config
-	exit 0
-fi
+	if [ $1 == remove ]; then
+		curl -X POST -H "Content-Type: application/json" -d "{\"cluster_name\": \"$CLUSTER_NAME\", \"address\": \"$ADDRESS\", \"port\": $PORT}" $ENVOY_SD/remove-endpoint
+		exit 0
+	fi
+}
 
+case "$1" in
+	add)
+		add $@
+		exit 0
+		;;
+	remove)
+		remove $@
+		exit 0
+		;;
+	show)
+		curl -X POST $ENVOY_SD/v3/discovery:clusters
+		exit 0
+		;;
+	reset)
+		curl -X POST $ENVOY_SD/reset
+		exit 0
+		;;
+	*)
+		usage
+		exit 1
+		;;
+esac

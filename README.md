@@ -15,7 +15,7 @@ flowchart TB
         CLI[cluster_client CLI]
     end
     
-    subgraph Services["🔧 Services (all on localhost)"]
+    subgraph Services["🔧 Services (on localhost)"]
         Flask[Flask EDS Server<br/>:5123<br/>Manages endpoints]
         Envoy[Envoy Proxy<br/>:9097 traffic<br/>:9191 admin]
         

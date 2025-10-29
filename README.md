@@ -57,12 +57,17 @@ Envoy listens on:
 
 **Expected output:**
 ```
-Request 1: Backend-1
-Request 2: Backend-2
-Request 3: Backend-3
-Request 4: Backend-1
-Request 5: Backend-2
-Request 6: Backend-3
+Request 1:
+Hello from Backend-1 on port 8080!
+
+Request 2:
+Hello from Backend-3 on port 8082!
+
+Request 3:
+Hello from Backend-2 on port 8081!
+
+Request 4:
+Hello from Backend-1 on port 8080!
 ...
 ```
 

@@ -6,12 +6,37 @@ Simple dynamic service discovery for Envoy Proxy using a Flask-based Endpoint Di
 
 ## What It Does
 
-Dynamically add/remove backend servers to Envoy without restarting:
+Dynamically add/remove backend servers to Envoy without restarting.
 
-```
-Client → Envoy Proxy (port 9097) → Your Backend Servers
-              ↓
-         Flask EDS Server (port 5123)
+```mermaid
+flowchart TB
+    subgraph User["👤 User Actions"]
+        Client[Client]
+        CLI[cluster_client CLI]
+    end
+    
+    subgraph Services["🔧 Services (all on localhost)"]
+        Flask[Flask EDS Server<br/>:5123<br/>Manages endpoints]
+        Envoy[Envoy Proxy<br/>:9097 traffic<br/>:9191 admin]
+        
+        B1[Backend 1<br/>:8080]
+        B2[Backend 2<br/>:8081]
+        B3[Backend 3<br/>:8082]
+    end
+    
+    Client -->|HTTP requests| Envoy
+    Envoy -->|Round-robin| B1
+    Envoy -->|Round-robin| B2
+    Envoy -->|Round-robin| B3
+    
+    Envoy -.->|Polls every 5s<br/>GET endpoints| Flask
+    CLI -->|Add/Remove endpoints| Flask
+    Client -.->|Monitor| Envoy
+    
+    style Flask fill:#E27D60,stroke:#333,stroke-width:2px
+    style Envoy fill:#4A90E2,stroke:#333,stroke-width:2px
+    style CLI fill:#85DCB0,stroke:#333,stroke-width:2px
+    style Client fill:#F4A261,stroke:#333,stroke-width:2px
 ```
 
 ## Quick Start

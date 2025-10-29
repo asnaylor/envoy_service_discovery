@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ENVOY_SD=${ENVOY_SD-envoy-cluster-sd-loadbalancer.iias-metrics.development.svc.spin.nersc.org:3306}
+ENVOY_SD=${ENVOY_SD-127.0.0.1:5123}
 CLUSTER_NAME=test-cluster
 
 function usage() {

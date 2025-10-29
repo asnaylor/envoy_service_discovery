@@ -25,14 +25,32 @@ static_resources:
           cluster: test-cluster
 
   clusters:
-  - name: discoveryservice
-    connect_timeout: 10s
+  # Application cluster - endpoints discovered via EDS
+  - name: test-cluster
     type: EDS
-    eds_cluster_config:
-      service_name: discoveryservice
-      eds_config:
-        path: "/envoy-config/eds.yaml"
+    connect_timeout: 0.25s
     lb_policy: ROUND_ROBIN
+    eds_cluster_config:
+      service_name: test-cluster
+      eds_config:
+        resource_api_version: V3
+        api_config_source:
+          api_type: REST
+          transport_api_version: V3
+          cluster_names: [discoveryservice]
+          refresh_delay: 5s
+          set_node_on_first_message_only: true
+
+  # Flask EDS server - static address
+  - name: discoveryservice
+    type: STATIC
+    connect_timeout: 10s
+    lb_policy: ROUND_ROBIN
+    typed_extension_protocol_options:
+      envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+        "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+        explicit_http_config:
+          http_protocol_options: {}
     load_assignment:
       cluster_name: discoveryservice
       endpoints:
@@ -40,16 +58,5 @@ static_resources:
         - endpoint:
             address:
               socket_address:
-                address: envoy-cluster-sd.iias-metrics.svc.cluster.local
-                port_value: 3036
-
-
-dynamic_resources:
-  cds_config:
-    api_config_source:
-      transport_api_version: V3
-      refresh_delay: 5s
-      api_type: REST
-      cluster_names: [discoveryservice]
-
-
+                address: 127.0.0.1
+                port_value: 5123

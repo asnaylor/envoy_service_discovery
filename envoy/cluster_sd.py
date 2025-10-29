@@ -14,8 +14,8 @@ class Endpoints:
             'endpoint': {
                 'address': {
                     'socket_address': {
-                        'address': f'{ip}',
-                        'port_value': f'{port}'
+                        'address': ip,
+                        'port_value': int(port)
                     }
                 }
             }
@@ -41,20 +41,20 @@ class Endpoints:
 app = Flask(__name__)
 endpoints = Endpoints()
 
-@app.route('/v3/discovery:clusters', methods=['POST'])
+@app.route('/v3/discovery:endpoints', methods=['POST'])
 def envoy_get_cluster_config():
+    """Envoy EDS endpoint - returns ClusterLoadAssignment for endpoint discovery."""
     response = {
         'version_info': '1',
         'resources': [
             {
-                '@type': 'type.googleapis.com/envoy.config.cluster.v3.Cluster',
-                'name': 'test-cluster',
-                'connect_timeout': '0.25s',
-                'lb_policy': 'round_robin',
-                'load_assignment': {
-                    'cluster_name': 'test-cluster',
-                    'endpoints': {'lb_endpoints': endpoints.list()}
-                }
+                '@type': 'type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment',
+                'cluster_name': 'test-cluster',
+                'endpoints': [
+                    {
+                        'lb_endpoints': endpoints.list()
+                    }
+                ]
             }
         ]
     }
@@ -87,4 +87,5 @@ def clear_hosts():
     return 'done!', 200
 
 if __name__ == '__main__':
-    app.run()
+    app.run(host='127.0.0.1', port=5123)
+
